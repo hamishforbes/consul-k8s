@@ -1,5 +1,8 @@
 ## UNRELEASED
 
+IMPROVEMENTS:
+  * Add `consul.hashicorp.com/service-ignore` to prevent services from being registered in Consul. [[GH-858](https://github.com/hashicorp/consul-k8s/pull/858)]
+
 ## 0.37.0 (November 18, 2021)
 
 BREAKING CHANGES:
