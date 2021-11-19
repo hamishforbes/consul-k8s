@@ -1,5 +1,8 @@
 ## UNRELEASED
 
+* CLI
+  * Add a label "managed-by" to every secret the control-plane creates. Only delete said secrets on an uninstall. [[GH-835](https://github.com/hashicorp/consul-k8s/pull/835)]
+
 ## 0.37.0 (November 18, 2021)
 
 BREAKING CHANGES:
