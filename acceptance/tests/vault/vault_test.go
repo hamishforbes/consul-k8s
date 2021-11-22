@@ -210,18 +210,17 @@ path "pki_int/issue/consul-server" {
 	require.NoError(t, err)
 
 	consulHelmValues := map[string]string{
-		"server.enabled":  "true",
-		"server.replicas": "1",
+		"server.enabled":               "true",
+		"server.replicas":              "1",
+		"server.serverCert.secretName": "pki_int/issue/consul-server",
+
+		"global.tls.enabled":           "true",
+		"global.tls.httpsOnly":         "false",
+		"global.tls.enableAutoEncrypt": "true",
+
+		"global.secretsBackend.vault.enabled":          "true",
 		"global.secretsBackend.vault.consulServerRole": "consul-server",
 		"global.secretsBackend.vault.consulClientRole": "consul-client",
-		"server.serverCert.secretName":                 "pki_int/issue/consul-server",
-
-		"connectInject.enabled": "true",
-
-		"global.secretsBackend.vault.enabled": "true",
-		"global.tls.enabled":                  "true",
-		"global.tls.httpsOnly":                "false",
-		"global.tls.enableAutoEncrypt":        "true",
 	}
 
 	logger.Log(t, "Installing Consul")
