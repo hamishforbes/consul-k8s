@@ -906,8 +906,14 @@ func (r *EndpointsController) processUpstreams(pod corev1.Pod, endpoints corev1.
 				}
 
 				if preparedQuery != "" {
+					upstreamConfig := map[string]interface{}{
+						"Limits": map[string]interface{}{
+							"MaxConnections": 10000,
+						},
+					}
 					upstream.DestinationType = api.UpstreamDestTypePreparedQuery
 					upstream.DestinationName = preparedQuery
+					upstream.Config = upstreamConfig
 				}
 
 				upstreams = append(upstreams, upstream)
