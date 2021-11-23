@@ -1,6 +1,7 @@
 package connectinject
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -8,6 +9,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"text/template"
 
 	mapset "github.com/deckarep/golang-set"
 	"github.com/go-logr/logr"
@@ -56,6 +58,51 @@ const (
 	// exposedPathsStartupPortsRangeStart is the start of the port range that we will use as
 	// the ListenerPort for the Expose configuration of the proxy registration for a startup probe.
 	exposedPathsStartupPortsRangeStart = 20500
+	localClusterTpl                    = `
+	{
+		"@type": "type.googleapis.com/envoy.config.cluster.v3.Cluster",
+		"name": "local_app",
+		"type": "STATIC",
+		"connect_timeout": "30s",
+		"circuit_breakers": {
+			"thresholds": [
+				{
+					"priority": "DEFAULT",
+					"max_connections": 100000,
+					"max_pending_requests": 100000,
+					"max_requests": 100000,
+					"max_retries": 3
+				},
+				{
+					"priority": "HIGH",
+					"max_connections": 100000,
+					"max_pending_requests": 100000,
+					"max_requests": 100000,
+					"max_retries": 3
+				}
+			]
+		},
+		"load_assignment": {
+			"cluster_name": "local_app",
+			"endpoints": [
+				{
+					"lb_endpoints": [
+						{
+							"endpoint": {
+								"address": {
+									"socket_address": {
+										"address": "127.0.0.1",
+										"port_value": {{ .LocalServicePort }}
+									}
+								}
+							}
+						}
+					]
+				}
+			]
+		}
+	}
+	`
 )
 
 type EndpointsController struct {
@@ -481,6 +528,18 @@ func (r *EndpointsController) createServiceRegistrations(pod corev1.Pod, service
 	if consulServicePort > 0 {
 		proxyConfig.LocalServiceAddress = "127.0.0.1"
 		proxyConfig.LocalServicePort = consulServicePort
+
+		// Horrible hack because Service-Defaults Limits config only applies upstream and not locally
+		// No way to configure the max connection limit on the local proxy cluster
+		// envoy_local_cluster_json is not templatable so you would have to set it for each service with the correct port
+		var buf bytes.Buffer
+		tpl := template.Must(template.New("envoy_local_cluster_json").Parse(strings.TrimSpace(localClusterTpl)))
+		err = tpl.Execute(&buf, &proxyConfig)
+		if err == nil {
+			proxyConfig.Config["envoy_local_cluster_json"] = buf.String()
+		} else {
+			r.Log.Error(err, "Could not template local_cluster_json")
+		}
 	}
 
 	upstreams, err := r.processUpstreams(pod, serviceEndpoints)
