@@ -42,6 +42,11 @@ func (h *Handler) envoySidecar(namespace corev1.Namespace, pod corev1.Pod) (core
 		Command: cmd,
 	}
 
+	lifecycle, err := h.envoySidecarLifecycle(pod)
+	if err == nil {
+		container.Lifecycle = lifecycle
+	}
+
 	tproxyEnabled, err := transparentProxyEnabled(namespace, pod, h.EnableTransparentProxy)
 	if err != nil {
 		return corev1.Container{}, err
@@ -76,6 +81,7 @@ func (h *Handler) envoySidecar(namespace corev1.Namespace, pod corev1.Pod) (core
 
 	return container, nil
 }
+
 func (h *Handler) getContainerSidecarCommand(pod corev1.Pod) ([]string, error) {
 	cmd := []string{
 		"envoy",
@@ -107,6 +113,29 @@ func (h *Handler) getContainerSidecarCommand(pod corev1.Pod) ([]string, error) {
 		}
 	}
 	return cmd, nil
+}
+
+func (h *Handler) envoySidecarLifecycle(pod corev1.Pod) (*corev1.Lifecycle, error) {
+
+	delay, annotationSet := pod.Annotations[annotationSidecarProxyPreStopDelay]
+
+	if !annotationSet {
+		return &corev1.Lifecycle{}, fmt.Errorf("Annotation not set")
+	}
+
+	lifecycle := &corev1.Lifecycle{
+		PreStop: &corev1.Handler{
+			Exec: &corev1.ExecAction{
+				Command: []string{
+					"/bin/sh",
+					"-c",
+					"sleep " + delay,
+				},
+			},
+		},
+	}
+
+	return lifecycle, nil
 }
 
 func (h *Handler) envoySidecarResources(pod corev1.Pod) (corev1.ResourceRequirements, error) {
