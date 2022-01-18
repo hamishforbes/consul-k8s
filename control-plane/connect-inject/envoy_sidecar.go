@@ -53,6 +53,11 @@ func (h *Handler) envoySidecar(namespace corev1.Namespace, pod corev1.Pod, mpi m
 		container.Lifecycle = lifecycle
 	}
 
+	ports, err := h.envoySidecarPorts(pod)
+	if err == nil {
+		container.Ports = ports
+	}
+
 	tproxyEnabled, err := transparentProxyEnabled(namespace, pod, h.EnableTransparentProxy)
 	if err != nil {
 		return corev1.Container{}, err
@@ -215,4 +220,34 @@ func (h *Handler) envoySidecarResources(pod corev1.Pod) (corev1.ResourceRequirem
 	}
 
 	return resources, nil
+}
+
+func (h *Handler) envoySidecarPorts(pod corev1.Pod) ([]corev1.ContainerPort, error) {
+
+	ports := []corev1.ContainerPort{}
+
+	enableMetrics, err := h.MetricsConfig.enableMetrics(pod)
+	if err != nil {
+		return ports, err
+	}
+
+	prometheusScrapePort, err := h.MetricsConfig.prometheusScrapePort(pod)
+	if err != nil {
+		return ports, err
+	}
+
+	scrapePort, err := strconv.ParseInt(prometheusScrapePort, 10, 32)
+	if err != nil {
+		return ports, err
+	}
+
+	if enableMetrics {
+		ports = append(ports, corev1.ContainerPort{
+			Name:          "envoy-metrics",
+			ContainerPort: int32(scrapePort),
+			Protocol:      corev1.ProtocolTCP,
+		})
+	}
+
+	return ports, nil
 }

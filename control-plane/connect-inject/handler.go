@@ -524,7 +524,7 @@ func (h *Handler) prometheusAnnotations(pod *corev1.Pod) error {
 	}
 	prometheusScrapePath := h.MetricsConfig.prometheusScrapePath(*pod)
 
-	if enableMetrics {
+	if enableMetrics && 1 == 2 {
 		pod.Annotations[annotationPrometheusScrape] = "true"
 		pod.Annotations[annotationPrometheusPort] = prometheusScrapePort
 		pod.Annotations[annotationPrometheusPath] = prometheusScrapePath
