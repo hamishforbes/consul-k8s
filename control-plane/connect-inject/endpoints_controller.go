@@ -969,7 +969,7 @@ func processPreparedQueryUpstream(pod corev1.Pod, rawUpstream string) api.Upstre
 			DestinationType: api.UpstreamDestTypePreparedQuery,
 			DestinationName: preparedQuery,
 			LocalBindPort:   int(port),
-			upstream.Config: upstreamConfig,
+			Config:          upstreamConfig,
 		}
 	}
 	return upstream
