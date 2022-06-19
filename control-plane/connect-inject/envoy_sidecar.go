@@ -48,12 +48,12 @@ func (w *MeshWebhook) envoySidecar(namespace corev1.Namespace, pod corev1.Pod, m
 		Command: cmd,
 	}
 
-	lifecycle, err := h.envoySidecarLifecycle(pod)
+	lifecycle, err := w.envoySidecarLifecycle(pod)
 	if err == nil {
 		container.Lifecycle = lifecycle
 	}
 
-	ports, err := h.envoySidecarPorts(pod)
+	ports, err := w.envoySidecarPorts(pod)
 	if err == nil {
 		container.Ports = ports
 	}
@@ -148,7 +148,7 @@ func (w *MeshWebhook) getContainerSidecarCommand(pod corev1.Pod, multiPortSvcNam
 	return cmd, nil
 }
 
-func (h *Handler) envoySidecarLifecycle(pod corev1.Pod) (*corev1.Lifecycle, error) {
+func (w *MeshWebhook) envoySidecarLifecycle(pod corev1.Pod) (*corev1.Lifecycle, error) {
 
 	delay, annotationSet := pod.Annotations[annotationSidecarProxyPreStopDelay]
 
@@ -237,16 +237,16 @@ func (w *MeshWebhook) envoySidecarResources(pod corev1.Pod) (corev1.ResourceRequ
 	return resources, nil
 }
 
-func (h *Handler) envoySidecarPorts(pod corev1.Pod) ([]corev1.ContainerPort, error) {
+func (w *MeshWebhook) envoySidecarPorts(pod corev1.Pod) ([]corev1.ContainerPort, error) {
 
 	ports := []corev1.ContainerPort{}
 
-	enableMetrics, err := h.MetricsConfig.enableMetrics(pod)
+	enableMetrics, err := w.MetricsConfig.enableMetrics(pod)
 	if err != nil {
 		return ports, err
 	}
 
-	prometheusScrapePort, err := h.MetricsConfig.prometheusScrapePort(pod)
+	prometheusScrapePort, err := w.MetricsConfig.prometheusScrapePort(pod)
 	if err != nil {
 		return ports, err
 	}
