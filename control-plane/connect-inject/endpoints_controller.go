@@ -904,10 +904,16 @@ func processPreparedQueryUpstream(pod corev1.Pod, rawUpstream string) api.Upstre
 	preparedQuery = strings.TrimSpace(parts[1])
 	var upstream api.Upstream
 	if port > 0 {
+		upstreamConfig := map[string]interface{}{
+			"Limits": map[string]interface{}{
+				"MaxConnections": 10000,
+			},
+		}
 		upstream = api.Upstream{
 			DestinationType: api.UpstreamDestTypePreparedQuery,
 			DestinationName: preparedQuery,
 			LocalBindPort:   int(port),
+			Config:          upstreamConfig,
 		}
 	}
 	return upstream
