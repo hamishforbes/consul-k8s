@@ -538,9 +538,11 @@ func (r *EndpointsController) createServiceRegistrations(pod corev1.Pod, service
 		proxyConfig.LocalServiceAddress = "127.0.0.1"
 		proxyConfig.LocalServicePort = consulServicePort
 
-		// Horrible hack because Service-Defaults Limits config only applies upstream and not locally
-		// No way to configure the max connection limit on the local proxy cluster
-		// envoy_local_cluster_json is not templatable so you would have to set it for each service with the correct port
+		// This hack is not strictly neccessary anymore
+		// https://github.com/hashicorp/consul/issues/12373
+		// As of Consul 1.13 `MaxInboundConnections` can be configured on the `service-defaults` configuration entry
+		// to increase the local_app cluster connection limit
+		// I'm keeping this in place so that I don't have to set a boilerplate `service-defaults` for every single service
 		var buf bytes.Buffer
 		tpl := template.Must(template.New("envoy_local_cluster_json").Parse(strings.TrimSpace(localClusterTpl)))
 		err = tpl.Execute(&buf, &proxyConfig)
@@ -964,6 +966,9 @@ func processPreparedQueryUpstream(pod corev1.Pod, rawUpstream string) api.Upstre
 	preparedQuery = strings.TrimSpace(parts[1])
 	var upstream api.Upstream
 	if port > 0 {
+		// Services found via prepared queries don't pickup upstream config
+		// https://github.com/hashicorp/consul/issues/11613
+		// Force the connection limit to 10k when configuring an upstream to a prepared query destination
 		upstreamConfig := map[string]interface{}{
 			"Limits": map[string]interface{}{
 				"MaxConnections": 10000,
