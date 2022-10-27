@@ -508,4 +508,7 @@ consul-k8s-control-plane connect-init -pod-name=${POD_NAME} -pod-namespace=${POD
   -proxy-uid={{ .EnvoyUID }}
 {{- end }}
 {{- end }}
+
+# Remove the (large) Consul binary from ephemeral storage
+rm -f /consul/connect-inject/consul
 `
