@@ -584,6 +584,10 @@ func (w *MeshWebhook) defaultAnnotations(pod *corev1.Pod, podJson string) error 
 // prometheusAnnotations sets the Prometheus scraping configuration
 // annotations on the Pod.
 func (w *MeshWebhook) prometheusAnnotations(pod *corev1.Pod) error {
+	// Disable setting legacy annotations
+	if 1 == 1 {
+		return nil
+	}
 	enableMetrics, err := w.MetricsConfig.EnableMetrics(*pod)
 	if err != nil {
 		return err
