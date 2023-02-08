@@ -1087,10 +1087,19 @@ func processPreparedQueryUpstream(pod corev1.Pod, rawUpstream string) api.Upstre
 	preparedQuery = strings.TrimSpace(parts[1])
 	var upstream api.Upstream
 	if port > 0 {
+		// Services found via prepared queries don't pickup upstream config
+		// https://github.com/hashicorp/consul/issues/11613
+		// Force the connection limit to 10k when configuring an upstream to a prepared query destination
+		upstreamConfig := map[string]interface{}{
+			"Limits": map[string]interface{}{
+				"MaxConnections": 10000,
+			},
+		}
 		upstream = api.Upstream{
 			DestinationType: api.UpstreamDestTypePreparedQuery,
 			DestinationName: preparedQuery,
 			LocalBindPort:   int(port),
+			Config:          upstreamConfig,
 		}
 	}
 	return upstream
