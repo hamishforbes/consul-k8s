@@ -106,6 +106,16 @@ func (w *MeshWebhook) consulDataplaneSidecar(namespace corev1.Namespace, pod cor
 		ReadinessProbe: probe,
 	}
 
+	lifecycle, err := w.sidecarLifecycle(pod)
+	if err == nil {
+		container.Lifecycle = lifecycle
+	}
+
+	ports, err := w.sidecarPorts(pod)
+	if err == nil {
+		container.Ports = ports
+	}
+
 	if w.AuthMethod != "" {
 		container.VolumeMounts = append(container.VolumeMounts, saTokenVolumeMount)
 	}
@@ -416,6 +426,59 @@ func (w *MeshWebhook) sidecarResources(pod corev1.Pod) (corev1.ResourceRequireme
 	}
 
 	return resources, nil
+}
+
+func (w *MeshWebhook) sidecarLifecycle(pod corev1.Pod) (*corev1.Lifecycle, error) {
+
+	delay, annotationSet := pod.Annotations[constants.AnnotationSidecarProxyPreStopDelay]
+
+	if !annotationSet {
+		return &corev1.Lifecycle{}, fmt.Errorf("Annotation not set")
+	}
+
+	lifecycle := &corev1.Lifecycle{
+		PreStop: &corev1.Handler{
+			Exec: &corev1.ExecAction{
+				Command: []string{
+					"/bin/sh",
+					"-c",
+					"sleep " + delay,
+				},
+			},
+		},
+	}
+
+	return lifecycle, nil
+}
+
+func (w *MeshWebhook) sidecarPorts(pod corev1.Pod) ([]corev1.ContainerPort, error) {
+
+	ports := []corev1.ContainerPort{}
+
+	enableMetrics, err := w.MetricsConfig.EnableMetrics(pod)
+	if err != nil {
+		return ports, err
+	}
+
+	prometheusScrapePort, err := w.MetricsConfig.PrometheusScrapePort(pod)
+	if err != nil {
+		return ports, err
+	}
+
+	scrapePort, err := strconv.ParseInt(prometheusScrapePort, 10, 32)
+	if err != nil {
+		return ports, err
+	}
+
+	if enableMetrics {
+		ports = append(ports, corev1.ContainerPort{
+			Name:          "envoy-metrics",
+			ContainerPort: int32(scrapePort),
+			Protocol:      corev1.ProtocolTCP,
+		})
+	}
+
+	return ports, nil
 }
 
 // useProxyHealthCheck returns true if the pod has the annotation 'consul.hashicorp.com/use-proxy-health-check'
